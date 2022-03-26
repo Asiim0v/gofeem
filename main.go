@@ -15,6 +15,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/skip2/go-qrcode"
 	"github.com/zserge/lorca"
 )
 
@@ -98,6 +99,22 @@ func UploadsController(c *gin.Context) {
 	}
 }
 
+// GET /api/v1/qrcodes
+// 1. 获取文本内容
+// 2. 将文本转为图片
+// 3. 将图片写入 HTTP 响应
+func QrcodesController(c *gin.Context) {
+	if content := c.Query("content"); content != "" {
+		png, err := qrcode.Encode(content, qrcode.Medium, 256)
+		if err != nil {
+			log.Fatal(err)
+		}
+		c.Data(http.StatusOK, "image/png", png)
+	} else {
+		c.Status(http.StatusBadRequest)
+	}
+}
+
 func main() {
 	// Gin 协程
 	go func() {
@@ -112,8 +129,8 @@ func main() {
 		router.GET("/uploads/:path", UploadsController)
 		// address 获取当前局域网 IP
 		router.GET("/api/v1/addresses", AddressesController)
-		// // qrcode 局域网 IP 转为二维码
-		// router.GET("/api/v1/qrcodes", controllers.QrcodesController)
+		// qrcode 局域网 IP 转为二维码
+		router.GET("/api/v1/qrcodes", QrcodesController)
 		// // files 上传文件
 		// router.POST("/api/v1/files", controllers.FilesController)
 		// texts 上传文本
