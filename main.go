@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -55,6 +56,22 @@ func TextsController(c *gin.Context) {
 	}
 }
 
+// GET /api/v1/addresses
+// 1. 获取电脑在各个局域网的 IP 地址
+// 2、转为 JSON 写入 HTTP 响应
+func AddressesController(c *gin.Context) {
+	addrs, _ := net.InterfaceAddrs() // 获取 PC 在各个局域网的 IP 地址， 用户选择 Phone 所在的对应 IP 地址
+	var result []string
+	for _, address := range addrs {
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				result = append(result, ipnet.IP.String())
+			}
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"addresses": result})
+}
+
 func main() {
 	// Gin 协程
 	go func() {
@@ -67,8 +84,8 @@ func main() {
 		// })
 		// // 下载接口, uploads 为所有上次的文件, path 为目标路径
 		// router.GET("/uploads/:path", controllers.UploadsController)
-		// // address 获取当前局域网 IP
-		// router.GET("/api/v1/addresses", controllers.AddressesController)
+		// address 获取当前局域网 IP
+		router.GET("/api/v1/addresses", AddressesController)
 		// // qrcode 局域网 IP 转为二维码
 		// router.GET("/api/v1/qrcodes", controllers.QrcodesController)
 		// // files 上传文件
