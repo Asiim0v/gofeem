@@ -11,9 +11,7 @@ import (
 func main() {
 
 	// Gin 协程
-	go func() {
-		server.Run()
-	}()
+	go server.Run()
 
 	// lorca 启动 Chrome
 	var ui lorca.UI
