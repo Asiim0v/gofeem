@@ -115,7 +115,41 @@ func QrcodesController(c *gin.Context) {
 	}
 }
 
+// POST /api/v1/files 区别在于保存文件而不是文本
+// 1. 获取 go 执行文件所在目录
+// 2. 在该目录创建 uploads 目录
+// 3. 将文件保存为另一个文件
+// 4. 返回后者的下载路径
+func FilesController(c *gin.Context) {
+	file, err := c.FormFile("raw") // 获取表单中的文件
+	if err != nil {
+		log.Fatal(err)
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		log.Fatal(err)
+	}
+	dir := filepath.Dir(exe)
+	if err != nil {
+		log.Fatal(err)
+	}
+	filename := uuid.New().String()
+	uploads := filepath.Join(dir, "uploads")
+	err = os.MkdirAll(uploads, os.ModePerm)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fullpath := path.Join("uploads", filename+filepath.Ext(file.Filename))
+	fileErr := c.SaveUploadedFile(file, filepath.Join(dir, fullpath))
+	if fileErr != nil {
+		log.Fatal(fileErr)
+	}
+	c.JSON(http.StatusOK, gin.H{"url": "/" + fullpath})
+}
+
 func main() {
+	port := "27149"
+
 	// Gin 协程
 	go func() {
 		gin.SetMode(gin.DebugMode)
@@ -131,8 +165,8 @@ func main() {
 		router.GET("/api/v1/addresses", AddressesController)
 		// qrcode 局域网 IP 转为二维码
 		router.GET("/api/v1/qrcodes", QrcodesController)
-		// // files 上传文件
-		// router.POST("/api/v1/files", controllers.FilesController)
+		// files 上传文件
+		router.POST("/api/v1/files", FilesController)
 		// texts 上传文本
 		router.POST("/api/v1/texts", TextsController)
 		// 添加静态路由, 所有 static 开头的路由都会自动读取 dist 下的对应文件
@@ -157,11 +191,11 @@ func main() {
 				c.Status(http.StatusNotFound)
 			}
 		})
-		router.Run(":8080")
+		router.Run(":" + port)
 	}()
 
 	var ui lorca.UI
-	ui, _ = lorca.New("http://localhost:8080/static/index.html", "", 800, 600)
+	ui, _ = lorca.New("http://localhost:"+port+"/static/index.html", "", 800, 600)
 
 	chSignal := make(chan os.Signal, 1)
 	signal.Notify(chSignal, os.Interrupt)
