@@ -72,6 +72,32 @@ func AddressesController(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"addresses": result})
 }
 
+func GetUploadsDir() (uploads string) {
+	exe, err := os.Executable()
+	if err != nil {
+		log.Fatal(err)
+	}
+	dir := filepath.Dir(exe)
+	uploads = filepath.Join(dir, "uploads")
+	return
+}
+
+// GET /uploads/:path
+// 1. 将网络路径 :path 变成本地绝对路径
+// 2. 读取本地文件, 写入 HTTP 响应
+func UploadsController(c *gin.Context) {
+	if path := c.Param("path"); path != "" {
+		target := filepath.Join(GetUploadsDir(), path)
+		c.Header("Content-Description", "File Transfer")
+		c.Header("Content-Transfer-Encoding", "binary")
+		c.Header("Content-Disposition", "attachment; filename="+path)
+		c.Header("Content-Type", "application/octet-stream")
+		c.File(target) // 将文件写入 HTTP 响应
+	} else {
+		c.Status(http.StatusNotFound)
+	}
+}
+
 func main() {
 	// Gin 协程
 	go func() {
@@ -82,8 +108,8 @@ func main() {
 		// router.GET("/ws", func(c *gin.Context) {
 		// 	ws.HttpController(c, hub)
 		// })
-		// // 下载接口, uploads 为所有上次的文件, path 为目标路径
-		// router.GET("/uploads/:path", controllers.UploadsController)
+		// 下载接口, uploads 为所有上传的文件, path 为目标路径
+		router.GET("/uploads/:path", UploadsController)
 		// address 获取当前局域网 IP
 		router.GET("/api/v1/addresses", AddressesController)
 		// // qrcode 局域网 IP 转为二维码
