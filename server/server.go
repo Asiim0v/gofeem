@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Asiim0v/gofeem/server/controllers"
+	"github.com/Asiim0v/gofeem/server/ws"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,10 +22,12 @@ func Run() {
 	gin.SetMode(gin.DebugMode)
 	router := gin.Default()
 
-	// // websocket, Phone 端上传时通知 PC 端
-	// router.GET("/ws", func(c *gin.Context) {
-	// 	ws.HttpController(c, hub)
-	// })
+	hub := ws.NewHub()
+	go hub.Run()
+	// websocket, Phone 端上传时通知 PC 端
+	router.GET("/ws", func(c *gin.Context) {
+		ws.HttpController(c, hub)
+	})
 	// 下载接口, uploads 为所有上传的文件, path 为目标路径
 	router.GET("/uploads/:path", controllers.UploadsController)
 	// address 获取当前局域网 IP
